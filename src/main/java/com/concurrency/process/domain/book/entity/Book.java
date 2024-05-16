@@ -23,19 +23,24 @@ public class Book {
 
     private Integer stockCount;
 
-//    public Book(String name, Long stock) {
-//        this.name = name;
-//        this.stock = stock;
-//    }
-
     public void increase() {
         validateStock();
         this.stockCount++;
     }
 
+    public void increase(int count) {
+        validateStock();
+        this.stockCount += count;
+    }
+
     public void decrease() {
         validateStock();
         this.stockCount--;
+    }
+
+    public void decrease(int count) {
+        validateStock();
+        this.stockCount -= count;
     }
 
     private void validateStock() {

@@ -2,6 +2,7 @@ package com.concurrency.process.domain.book.service;
 
 import com.concurrency.process.domain.book.entity.Book;
 import com.concurrency.process.domain.book.repository.BookRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +15,7 @@ import java.util.concurrent.Executors;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
+@Slf4j
 class BookServiceTest {
 
     @Autowired
@@ -22,8 +24,8 @@ class BookServiceTest {
     @Autowired
     private BookRepository bookRepository;
 
-    private final int TOTAL_BOOK_STOCK_COUNT = 10;
-    private final int THREAD_COUNT = TOTAL_BOOK_STOCK_COUNT;
+    private final int TOTAL_BOOK_STOCK_COUNT = 1000;
+    private final int THREAD_COUNT = 10;
     private Book book;
     @BeforeEach
     void setUp() {
@@ -34,12 +36,14 @@ class BookServiceTest {
     @Test
     void 동시주문_분산락_미적용() throws InterruptedException {
         ExecutorService executorService = Executors.newFixedThreadPool(THREAD_COUNT);
-        CountDownLatch latch = new CountDownLatch(THREAD_COUNT);
+        CountDownLatch latch = new CountDownLatch(TOTAL_BOOK_STOCK_COUNT);
 
-        for (int i = 0; i < THREAD_COUNT; i++) {
+        for (int i = 0; i < TOTAL_BOOK_STOCK_COUNT; i++) {
             executorService.submit(() -> {
                 try {
-                    bookService.orderBook(book.getId());
+                    bookService.orderBook(book.getId(), 2);
+                } catch (Exception e) {
+                    log.error(e.getMessage());
                 } finally {
                     latch.countDown();
                 }
@@ -52,18 +56,20 @@ class BookServiceTest {
                 .orElseThrow(IllegalArgumentException::new);
 
         assertNotEquals(0, persistBook.getStockCount());
-        System.out.println("남은 재고 개수 = " + persistBook.getStockCount());
+        log.info("남은 도서 재고 개수 - {}", persistBook.getStockCount());
     }
 
     @Test
     void 동시주문_분산락_적용() throws InterruptedException {
         ExecutorService executorService = Executors.newFixedThreadPool(THREAD_COUNT);
-        CountDownLatch latch = new CountDownLatch(THREAD_COUNT);
 
-        for (int i = 0; i < THREAD_COUNT; i++) {
+        CountDownLatch latch = new CountDownLatch(TOTAL_BOOK_STOCK_COUNT);
+        for (int i = 0; i < TOTAL_BOOK_STOCK_COUNT; i++) {
             executorService.submit(() -> {
                 try {
-                    bookService.orderBook(book.getName(), book.getId());
+                    bookService.orderBook(book.getName(), book.getId(), 2);
+                } catch (Exception e) {
+                    log.error(e.getMessage());
                 } finally {
                     latch.countDown();
                 }
@@ -76,7 +82,7 @@ class BookServiceTest {
                 .orElseThrow(IllegalArgumentException::new);
 
         assertEquals(0, persistBook.getStockCount());
-        System.out.println("남은 재고 개수 = " + persistBook.getStockCount());
+        log.info("남은 도서 재고 개수 - {}", persistBook.getStockCount());
     }
 
 }

@@ -14,6 +14,7 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Method;
+import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
 
 @Aspect
@@ -36,16 +37,15 @@ public class RedisLockAop {
         String key = REDISSON_LOCK_PREFIX + getDynamicValue(signature.getParameterNames(), joinPoint.getArgs(), distributedLock.key());
         RLock rLock = redissonClient.getLock(key);
 
-        try {
-            boolean available = rLock.tryLock(distributedLock.waitTime(), distributedLock.leaseTime(), distributedLock.timeUnit());
-            if (!available) {
-                return false;
-            }
+        boolean available = rLock.tryLock(distributedLock.waitTime(), distributedLock.leaseTime(), distributedLock.timeUnit());
+        if (!available) {
+            return false;
+        }
 
+        try {
             return proceedingTransaction.proceed(joinPoint);
-        } catch (InterruptedException e) {
-            throw new InterruptedException();
-        } finally {
+        }
+        finally {
             try {
                 rLock.unlock();
             } catch (IllegalMonitorStateException e) {
